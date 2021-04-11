@@ -28,6 +28,8 @@ import org.jasig.cas.client.validation.Cas20ProxyReceivingTicketValidationFilter
 import org.jasig.cas.client.validation.Cas30ProxyReceivingTicketValidationFilter;
 import org.jasig.cas.client.validation.Saml11TicketValidationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -35,16 +37,18 @@ import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.security.cas.authentication.CasAssertionAuthenticationToken;
+import org.springframework.security.cas.authentication.CasAuthenticationToken;
+import org.springframework.security.cas.userdetails.GrantedAuthorityFromAssertionAttributesUserDetailsService;
+import org.springframework.security.core.userdetails.AuthenticationUserDetailsService;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
-
 import javax.servlet.Filter;
-
 import java.util.Collection;
+import java.util.EventListener;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.EventListener;
 
 /**
  * Configuration class providing default CAS client infrastructure filters.
@@ -210,7 +214,7 @@ public class CasClientConfiguration {
     public FilterRegistrationBean casSingleSignOutFilter() {
         final FilterRegistrationBean singleSignOutFilter = new FilterRegistrationBean();
         singleSignOutFilter.setFilter(new SingleSignOutFilter());
-        Map<String,String> initParameters = new HashMap<>(1);
+        Map<String, String> initParameters = new HashMap<>(1);
         initParameters.put("casServerUrlPrefix", configProps.getServerUrlPrefix());
         singleSignOutFilter.setInitParameters(initParameters);
         singleSignOutFilter.setOrder(Ordered.HIGHEST_PRECEDENCE);
@@ -219,10 +223,37 @@ public class CasClientConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "cas", value = "single-logout.enabled", havingValue = "true")
-    public ServletListenerRegistrationBean<EventListener> casSingleSignOutListener(){
+    public ServletListenerRegistrationBean<EventListener> casSingleSignOutListener() {
         ServletListenerRegistrationBean<EventListener> singleSignOutListener = new ServletListenerRegistrationBean<>();
         singleSignOutListener.setListener(new SingleSignOutHttpSessionListener());
         singleSignOutListener.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return singleSignOutListener;
+    }
+
+    @Configuration
+    @EnableConfigurationProperties(CasClientConfigurationProperties.class)
+    @ConditionalOnClass(CasAuthenticationToken.class)
+    @ConditionalOnProperty(prefix = "cas", value = "use-session", havingValue = "true", matchIfMissing = true)
+    public class SpringSecurityAssertionAutoConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean(name = "springSecurityAssertionSessionContextFilter")
+        public FilterRegistrationBean springSecurityAssertionSessionContextFilter() {
+            final FilterRegistrationBean filter = new FilterRegistrationBean();
+            filter.setFilter(new SpringSecurityAssertionSessionContextFilter(springSecurityCasUserDetailsService()));
+            filter.setEnabled(!configProps.getAttributeAuthorities().isEmpty());
+            filter.setOrder(0);
+            if (casClientConfigurer != null) {
+                casClientConfigurer.configureHttpServletRequestWrapperFilter(filter);
+            }
+            return filter;
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(name = "springSecurityCasUserDetailsService")
+        public AuthenticationUserDetailsService<CasAssertionAuthenticationToken> springSecurityCasUserDetailsService() {
+            return new GrantedAuthorityFromAssertionAttributesUserDetailsService(
+                configProps.getAttributeAuthorities().toArray(new String[]{}));
+        }
     }
 }

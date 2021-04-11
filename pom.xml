@@ -26,7 +26,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.jasig.cas.client</groupId>
-    <version>3.6.2-SNAPSHOT</version>
+    <version>3.6.3-SNAPSHOT</version>
     <artifactId>cas-client</artifactId>
     <packaging>pom</packaging>
 
@@ -250,7 +250,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -268,7 +268,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk15on</artifactId>
-            <version>1.66</version>
+            <version>1.68</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -309,10 +309,10 @@
     </modules>
 
     <properties>
-        <spring.version>5.2.9.RELEASE</spring.version>
+        <spring.version>5.3.4</spring.version>
         <ehcache.version>2.6.11</ehcache.version>
         <clover.version>3.0.2</clover.version>
         <slf4j.version>1.7.30</slf4j.version>
-        <jackson.version>2.11.3</jackson.version>
+        <jackson.version>2.12.2</jackson.version>
     </properties>
 </project>
